@@ -29,7 +29,7 @@
                 align-items: center;
                 flex-direction: column;
             }
-            #timerContainer svg {
+            #timerContainer > svg {
                 position: absolute;
                 top: 0;
                 left: 0;
@@ -47,11 +47,28 @@
                 text-align: center;
                 font-size: 5rem;
                 margin: 0;
+                outline: none;
+                border: none;
+                background: transparent;
+                width: 6ch;
+                caret-color: #339989;
+            }
+            #timer[contenteditable="true"] {
+                border-bottom: 2px solid #339989;
+                cursor: text;
             }
             #mode {
                 text-align: center;
                 font-size: 1.5rem;
                 margin: 0;
+            }
+            #startStopWrapper {
+                filter: drop-shadow(0 0 0px #339989);
+                transition: filter 0.3s ease;
+                cursor: pointer;
+            }
+            #startStopWrapper:hover {
+                filter: drop-shadow(0 0 8px #339989);
             }
             #startStop {
                 width: min(5vh, 5vw);
@@ -59,10 +76,26 @@
                 clip-path: polygon(0 0, 100% 50%, 100% 50%, 0 100%);
                 background-color: #339989;
                 transition: clip-path 0.3s ease;
-                cursor: pointer;
             }
             #startStop.paused {
                 clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+            }
+            #settingsButton {
+                position: relative;
+                z-index: 1;
+                width: min(4vh, 4vw);
+                height: min(4vh, 4vw);
+                cursor: pointer;
+                opacity: 0.6;
+                transition: opacity 0.3s ease, filter 0.3s ease;
+            }
+            #settingsButton:hover {
+                opacity: 1;
+                filter: drop-shadow(0 0 8px #339989);
+            }
+            #settingsButton.active {
+                opacity: 1;
+                filter: drop-shadow(0 0 8px #339989);
             }
         </style>
     </head>
@@ -73,29 +106,36 @@
                 <circle id="dot" cx="150" cy="30" r="10" fill="#283044" stroke="#339989" stroke-width="5"/>
             </svg>
             <div id="timerContent">
-                <h1 id="timer">25:00</h1>
-                <div onclick="startStop();" id="startStop"></div>
+                <h1 id="timer" contenteditable="false" spellcheck="false">25:00</h1>
+                <div id="startStopWrapper" onclick="startStop();">
+                    <div id="startStop"></div>
+                </div>
                 <p id="mode">Work</p>
             </div>
+            <svg id="settingsButton" onclick="openSettings();" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#339989" d="M 447.70881 -12.781343 A 42.041451 42.041451 0 0 0 405.66786 29.260344 L 405.66786 50.301721 L 27.434765 50.301721 A 42.041302 42.041302 0 0 0 -14.606185 92.341354 A 42.041302 42.041302 0 0 0 27.434765 134.38304 L 405.66786 134.38304 L 405.66786 155.44906 A 42.041451 42.041451 0 0 0 447.70881 197.49075 A 42.041451 42.041451 0 0 0 489.74976 155.44906 L 489.74976 134.38304 L 573.78036 134.38304 A 42.041302 42.041302 0 0 0 615.82336 92.341354 A 42.041302 42.041302 0 0 0 573.78036 50.301721 L 489.74976 50.301721 L 489.74976 29.260344 A 42.041451 42.041451 0 0 0 447.70881 -12.781343 z M 143.0012 197.48869 A 42.041451 42.041451 0 0 0 100.9582 239.53038 L 100.9582 260.5697 L 27.447078 260.5697 A 42.041302 42.041302 0 0 0 -14.593872 302.61139 A 42.041302 42.041302 0 0 0 27.447078 344.65308 L 100.9582 344.65308 L 100.9582 365.7191 A 42.041451 42.041451 0 0 0 143.0012 407.76078 A 42.041451 42.041451 0 0 0 185.04215 365.7191 L 185.04215 344.65308 L 573.79472 344.65308 A 42.041302 42.041302 0 0 0 615.83567 302.61139 A 42.041302 42.041302 0 0 0 573.79472 260.5697 L 185.04215 260.5697 L 185.04215 239.53038 A 42.041451 42.041451 0 0 0 143.0012 197.48869 z M 279.59427 407.76078 A 42.041451 42.041451 0 0 0 237.55332 449.80042 L 237.55332 470.83974 L 27.447078 470.83974 A 42.041302 42.041302 0 0 0 -14.593872 512.88143 A 42.041302 42.041302 0 0 0 27.447078 554.92106 L 237.55332 554.92106 L 237.55332 575.98913 A 42.041451 42.041451 0 0 0 279.59427 618.02877 A 42.041451 42.041451 0 0 0 321.63522 575.98913 L 321.63522 554.92106 L 573.79472 554.92106 A 42.041302 42.041302 0 0 0 615.83567 512.88143 A 42.041302 42.041302 0 0 0 573.79472 470.83974 L 321.63522 470.83974 L 321.63522 449.80042 A 42.041451 42.041451 0 0 0 279.59427 407.76078 z"/>
+            </svg>
         </div>
         <script>
-            const WORK_MINS = 25;
-            const BREAK_MINS = 5;
-
+            let WORK_MINS = 25;
+            let BREAK_MINS = 5;
+            
             let totalSeconds = WORK_MINS * 60;
             let secondsLeft = totalSeconds;
             let isRunning = false;
-            let intervalId = null;
             let isWork = true;
             let sessions = 0;
-
+            let startTime = null;
+            let settingsOpen = false;
+            let editingWork = true;
+            
             function updateDisplay(secondsRemaining) {
                 const ceiled = Math.ceil(secondsRemaining);
                 const mins = Math.floor(ceiled / 60);
                 const secs = ceiled % 60;
                 document.querySelector("#timer").innerText =
                     String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
-
+            
                 const progress = secondsRemaining / totalSeconds;
                 const angle = (2 * Math.PI * (1 - progress)) - Math.PI / 2;
                 const dotX = 150 + 120 * Math.cos(angle);
@@ -103,7 +143,7 @@
                 document.querySelector("#dot").setAttribute("cx", dotX);
                 document.querySelector("#dot").setAttribute("cy", dotY);
             }
-
+            
             function switchMode() {
                 isWork = !isWork;
                 if (isWork) {
@@ -118,14 +158,11 @@
                 updateDisplay(secondsLeft);
                 startTimer();
             }
-
-            let startTime = null;
-            let pausedSecondsLeft = null;
             
             function startTimer() {
                 isRunning = true;
                 startTime = performance.now() - ((totalSeconds - secondsLeft) * 1000);
-                
+            
                 function frame(timestamp) {
                     if (!isRunning) return;
                     const elapsed = (timestamp - startTime) / 1000;
@@ -140,21 +177,92 @@
                 }
                 requestAnimationFrame(frame);
             }
-
+            
             function startStop() {
+                if (settingsOpen) return;
                 document.querySelector("#startStop").classList.toggle("paused");
                 if (isRunning) {
                     isRunning = false;
                     secondsLeft = totalSeconds;
                     updateDisplay(secondsLeft);
-                    isWork = false;
-                    switchMode();
-                    isRunning = false;
                 } else {
                     startTimer();
                 }
             }
-
+            
+            function saveTimerInput() {
+                const timer = document.querySelector("#timer");
+                const text = timer.innerText.trim();
+                const parts = text.split(":");
+                if (parts.length === 2) {
+                    let mins = parseInt(parts[0]);
+                    let secs = parseInt(parts[1]);
+                    if (isNaN(mins)) mins = 0;
+                    if (isNaN(secs)) secs = 0;
+                    mins = Math.min(59, Math.max(0, mins));
+                    secs = Math.min(59, Math.max(0, secs));
+                    const newTotal = mins * 60 + secs;
+                    if (newTotal > 0) {
+                        if (editingWork) {
+                            WORK_MINS = mins;
+                            if (isWork) {
+                                totalSeconds = newTotal;
+                                secondsLeft = newTotal;
+                            }
+                        } else {
+                            BREAK_MINS = mins;
+                            if (!isWork) {
+                                totalSeconds = newTotal;
+                                secondsLeft = newTotal;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            function toggleEditMode() {
+                if (!settingsOpen) return;
+                saveTimerInput();
+                editingWork = !editingWork;
+                document.querySelector("#mode").innerText = editingWork ? "Work" : "Break";
+                const mins = editingWork ? WORK_MINS : BREAK_MINS;
+                document.querySelector("#timer").innerText =
+                    String(mins).padStart(2, "0") + ":00";
+                document.querySelector("#timer").focus();
+            }
+            
+            function openSettings() {
+                settingsOpen = !settingsOpen;
+                const timer = document.querySelector("#timer");
+                const btn = document.querySelector("#settingsButton");
+            
+                if (settingsOpen) {
+                    if (isRunning) {
+                        isRunning = false;
+                        document.querySelector("#startStop").classList.remove("paused");
+                    }
+                    editingWork = true;
+                    document.querySelector("#mode").innerText = "Work";
+                    timer.innerText = String(WORK_MINS).padStart(2, "0") + ":00";
+                    timer.contentEditable = "true";
+                    timer.focus();
+                    btn.classList.add("active");
+                    document.querySelector("#mode").style.cursor = "pointer";
+                } else {
+                    saveTimerInput();
+                    timer.contentEditable = "false";
+                    btn.classList.remove("active");
+                    editingWork = true;
+                    document.querySelector("#mode").innerText = isWork ? "Work" : "Break";
+                    secondsLeft = isWork ? WORK_MINS * 60 : BREAK_MINS * 60;
+                    totalSeconds = secondsLeft;
+                    updateDisplay(secondsLeft);
+                    document.querySelector("#mode").style.cursor = "default";
+                }
+            }
+            
+            document.querySelector("#mode").onclick = toggleEditMode;
+            
             updateDisplay(secondsLeft);
         </script>
     </body>
